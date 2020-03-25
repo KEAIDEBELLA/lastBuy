@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>模拟秒杀</title>
+</head>
+
+<body>
+    <div id="res">商品信息</div>
+
+    <div id="goods">
+        <div>
+            <img style="width: 100px;height: 150px;" src="./143-陈俊 .jpg" alt="">
+        </div>
+        <div id="goodsName"></div>
+        <text>剩余时间：</text>
+        <div id="endDate">
+        </div>
+        <button id="buyGoods" onClick="buyNow()">给我买它</button>
+    </div>
+
+    <script type="text/javascript">
+        //继承date
+        // (new Date()).Format("yyyy-MM-dd hh:mm:ss.S") ==> 2006-07-02 08:09:04.423 
+        // (new Date()).Format("yyyy-M-d h:m:s.S")      ==> 2006-7-2 8:9:4.18 
+        Date.prototype.Format = function (fmt) {
+            var o = {
+                "M+": this.getMonth() + 1, //月份 
+                "d+": this.getDate(), //日 
+                "H+": this.getHours(), //小时 
+                "m+": this.getMinutes(), //分 
+                "s+": this.getSeconds(), //秒 
+                "q+": Math.floor((this.getMonth() + 3) / 3), //季度 
+                "S": this.getMilliseconds() //毫秒 
+            };
+            if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+            for (var k in o)
+                if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+            return fmt;
+        }
+        //计算倒计时方法    
+        function getRemainderTime(startTime, endTime) {
+            var s1 = new Date(startTime.replace(/-/g, "/")),
+                s2 = new Date(endTime.replace(/-/g, "/")),
+                runTime = parseInt((s2.getTime() - s1.getTime()) / 1000);
+            var year = Math.floor(runTime / 86400 / 365);
+            runTime = runTime % (86400 * 365);
+            var month = Math.floor(runTime / 86400 / 30);
+            runTime = runTime % (86400 * 30);
+            var day = Math.floor(runTime / 86400);
+            runTime = runTime % 86400;
+            var hour = Math.floor(runTime / 3600);
+            runTime = runTime % 3600;
+            var minute = Math.floor(runTime / 60);
+            runTime = runTime % 60;
+            var second = runTime;
+            return day + '天,' + hour + '小时,' + minute + '分,' + second + '秒';
+        }
+        GetData()
+        //获取当前的商品和时间
+        function GetData() {
+            //创建AJAX对象
+            var xhr = new XMLHttpRequest();
+            //向服务器发送请求，指定请求类型，地址，设置请求头
+            xhr.open("POST", "http://localhost:8088/", true);
+            // xhr.setRequestHeader('content-type','application/x-www-form-urlencoded' );
+            //响应解析完成，将后端返回数据更新在页面上
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) {
+                        //获取到数据
+                        var data = JSON.parse(xhr.responseText)
+                        var serverDate = new Date(data.serverDate).Format("yyyy-MM-dd HH:mm:ss")
+                        var serverDateTmp = new Date(serverDate).getTime()
+                        var goods = data.goods[0]
+                        var endDate = new Date(goods.endDate).Format("yyyy-MM-dd HH:mm:ss")
+                        var endDateTmp = new Date(endDate).getTime()
+
+                        document.getElementById("goodsName").innerHTML = goods.name;
+
+                        // 判断当前商品剩余时间和数量是否能抢购。
+                        if (goods.num < 1 || endDateTmp < serverDateTmp) {
+                            document.getElementById("buyGoods").disabled = true
+                            document.getElementById("buyGoods").innerHTML = '已经抢光了'
+                            document.getElementById("endDate").innerHTML = '秒杀已经结束'
+                        } else {
+
+                            //将当前剩余时间算出来
+                            var timeText = getRemainderTime(serverDate, endDate)
+                            document.getElementById("endDate").innerHTML = timeText
+                            //开启倒计时
+                            var dao = setInterval(function () {
+                                //每秒更新服务器时间戳
+                                serverDateTmp += 1000
+                                if (endDateTmp < serverDateTmp) {
+                                    clearInterval(dao)
+                                    document.getElementById("buyGoods").disabled = true
+                                    document.getElementById("buyGoods").innerHTML = '已经抢光了'
+                                    document.getElementById("endDate").innerHTML = '秒杀已经结束'
+                                } else {
+                                    serverDate = new Date(serverDateTmp).Format("yyyy-MM-dd HH:mm:ss")
+                                    var timeText = getRemainderTime(serverDate, endDate)
+                                    document.getElementById("endDate").innerHTML = timeText
+                                }
+
+                            }, 1000)
+                        }
+                    }
+                }
+            }
+            //发送内容
+            xhr.send();
+        }
+        //点击事件
+        function buyNow() { 
+            //这里发送请求到后端  
+            //判断库存 和 时间
+            alert('恭喜您抢到一件')        
+            console.log('买到了')    
+        }
+    </script>
+</body>
+
+</html>
